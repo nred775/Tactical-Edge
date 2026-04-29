@@ -81,10 +81,12 @@ export const useStore = create<GameStore>((set, get) => ({
     const socket = io();
     
     socket.on('connect', () => {
+      console.log('[CLIENT] Connected with ID:', socket.id);
       set({ myId: socket.id });
     });
 
     socket.on('match_found', ({ roomId, initialState }) => {
+      console.log('[CLIENT] Match found! Room:', roomId, 'State:', initialState);
       set({ 
         roomId, 
         gameState: GameState.FREEZE_TIME, 
@@ -92,7 +94,9 @@ export const useStore = create<GameStore>((set, get) => ({
         timer: 10,
         bombPos: initialState.bombPos,
         bombCarrierId: null,
-        bombOnGround: true
+        bombOnGround: true,
+        attackerScore: initialState.attackerScore,
+        defenderScore: initialState.defenderScore
       });
     });
 

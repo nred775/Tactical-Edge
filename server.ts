@@ -22,29 +22,38 @@ async function startServer() {
   const rooms: Record<string, any> = {};
 
   io.on("connection", (socket) => {
-    console.log("Client connected:", socket.id);
+    console.log(`[SERVER] Matchmaking: Client connected: ${socket.id}`);
 
     socket.on("join_queue", (mode: string) => {
-      console.log(`Player ${socket.id} joined ${mode} queue`);
+      console.log(`[SERVER] Matchmaking: Player ${socket.id} joining ${mode} queue`);
+      
+      // Clean up previous queues for this socket
+      Object.keys(queues).forEach(m => {
+        queues[m] = queues[m].filter(id => id !== socket.id);
+      });
+
       queues[mode].push(socket.id);
+      console.log(`[SERVER] Matchmaking: ${mode} queue length: ${queues[mode].length}`);
 
       const targetCount = mode === "1v1" ? 2 : 4;
       if (queues[mode].length >= targetCount) {
         const playersInMatch = queues[mode].splice(0, targetCount);
-        const roomId = "room_" + Date.now();
+        const roomId = "room_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+        
+        console.log(`[SERVER] Matchmaking: FOUND MATCH! Room ID: ${roomId} with players: ${playersInMatch}`);
         
         const roomState = {
           id: roomId,
           players: playersInMatch.map((id, index) => ({
             id,
             team: index < targetCount / 2 ? "ATTACKERS" : "DEFENDERS",
-            pos: index < targetCount / 2 ? [0, 4, 25] : [0, 4, -25], // Corrected spawn
+            pos: index < targetCount / 2 ? [0, 4, 25] : [0, 4, -25],
             health: 100,
             isAlive: true
           })),
           gameState: "FREEZE_TIME",
           timer: 10,
-          bombPos: [0, 0.5, 20], // Near attackers side for pickup
+          bombPos: [0, 0.5, 20],
           bombCarrierId: null,
           attackerScore: 0,
           defenderScore: 0,
@@ -53,13 +62,22 @@ async function startServer() {
 
         rooms[roomId] = roomState;
 
+        // Ensure both players join the room
         playersInMatch.forEach(pid => {
-          const s = io.sockets.sockets.get(pid);
-          if (s) {
-            s.join(roomId);
-            s.emit("match_found", { roomId, initialState: roomState });
-          }
+            const playerSocket = io.sockets.sockets.get(pid);
+            if (playerSocket) {
+                playerSocket.join(roomId);
+                console.log(`[SERVER] Matchmaking: Socket ${pid} joined ${roomId}`);
+            } else {
+                console.log(`[SERVER] Matchmaking: WARNING - Socket ${pid} not found during join!`);
+            }
         });
+
+        // Broadcast match found to everyone in the room
+        setTimeout(() => {
+            console.log(`[SERVER] Matchmaking: Emitting match_found to room ${roomId}`);
+            io.to(roomId).emit("match_found", { roomId, initialState: roomState });
+        }, 500); // Tiny delay to ensure join completes
 
         // Start server-side tick for this room
         const interval = setInterval(() => {

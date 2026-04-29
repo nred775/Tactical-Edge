@@ -23,9 +23,18 @@ export const HUD = () => {
 
   const me = players[myId];
   const [localTimer, setLocalTimer] = useState(0);
+  const [isConnected, setIsConnected] = useState(false);
 
   const socket = useStore(state => state.socket);
   const roomId = useStore(state => state.roomId);
+
+  useEffect(() => {
+    if (socket) {
+        setIsConnected(socket.connected);
+        socket.on('connect', () => setIsConnected(true));
+        socket.on('disconnect', () => setIsConnected(false));
+    }
+  }, [socket]);
 
   const handleNextRound = () => {
     if (socket && roomId) {
@@ -60,10 +69,17 @@ export const HUD = () => {
         <motion.h1 
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="text-7xl font-black mb-12 tracking-tighter text-cyan-500 italic"
+          className="text-7xl font-black mb-4 tracking-tighter text-cyan-500 italic"
         >
           TACTICAL EDGE
         </motion.h1>
+
+        <div className="flex items-center gap-2 mb-12 bg-white/5 px-4 py-1 rounded-full border border-white/10">
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-red-500'}`} />
+            <span className="text-[10px] font-mono tracking-widest text-zinc-400 uppercase">
+                {isConnected ? `CONNECTED: ${myId.slice(0, 8)}` : 'DISCONNECTED'}
+            </span>
+        </div>
         
         <div className="grid grid-cols-2 gap-8 max-w-4xl w-full px-8 relative z-10">
             <button 
