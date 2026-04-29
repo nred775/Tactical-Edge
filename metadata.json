@@ -1,0 +1,12 @@
+{
+  "name": "Tactical Edge",
+  "description": "A simplified 3D tactical FPS featuring 1v1/2v2 rounds, bomb plant/defuse mechanics, and objective-based gameplay.",
+  "requestFramePermissions": [
+    "pointerLock"
+  ],
+  "majorCapabilities": [
+    "3D Graphics",
+    "Physics Engine",
+    "First Person Mechanics"
+  ]
+}
